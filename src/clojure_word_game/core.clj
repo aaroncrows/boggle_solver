@@ -35,37 +35,40 @@
 
 ))
 
-#_(defn trie-word
-  [word trie]
-  (def make-key (comp keyword str))
-  (loop [[curr & remaining-chars] word
-          node {}]
-          (print (assoc-in node (concat (seq remaining-chars) "word") word))
-          (if curr
-           (recur remaining-chars ((make-key curr)(assoc node (make-key curr) {})))
-           (assoc trie :x node))))
+(defn random-letter
+  "Returns a random capital letter from A-Z"
+  [& args]
+  (-> 26 rand-int (+ 65) char str))
 
-#_(defn loop-chars
-  [word]
-  (loop [[curr & remaining] word]
-    (print curr)
-  (when curr (recur remaining))))
-
-(update-in {}
-  (map #(keyword (str %)) (seq "things"))
-  assoc :word "things"
-)
+(defn random-letter-seq
+  "Returns a string of random letters"
+  [length]
+  (map random-letter (range length)))
 
 (defn make-trie
   [words]
   (loop [[curr & rest] words trie {}]
     (if (nil? curr)
      trie
-
      (recur rest (update-in trie
       (map #(keyword (str %)) (seq curr))
       assoc :word curr)))))
 
-(defn make-grid
-  [height]
-  (take 20 (repeatedly #(-> 26 rand-int (+ 65) char str))))
+(defn make-board
+  "makes a game board of random letters"
+  [s]
+  (vec (for [x (range s)]
+    (vec (random-letter-seq s)))))
+
+(def board (make-grid 3))
+
+
+
+(defn adjacent
+  [grid coords]
+  ((get-in grid coords)))
+
+#_(adjacent board [2 2])
+
+
+
