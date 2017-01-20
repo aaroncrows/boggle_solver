@@ -15,6 +15,8 @@
     (s/split (slurp "/usr/share/dict/words")
     #"\n")))
 
+(def pw (partition (/ (count w) 10) (generate-word-set)))
+
 #_(defn generate-trie
   [words]
   (def make-key (comp keyword str))
@@ -46,13 +48,17 @@
   (mapv random-letter (range length)))
 
 (defn make-trie
-  [words]
+  ([words trie]
   (loop [[curr & rest] words trie {}]
     (if (nil? curr)
      trie
      (recur rest (update-in trie
       (map #(keyword (str %)) (seq curr))
       assoc :word curr)))))
+    ([words] make-trie words {}))
+(def trie (make-trie (generate-word-set)))
+
+(reduce {} make-trie (partition (/ (count w) 50) (generate-word-set)))
 
 (defn make-board
   "makes a game board of random letters"
@@ -72,10 +78,24 @@
   [f grid coords]
   (def adjacent-coords (adjacent-coords coords))
 
-  (loop [[dir & remaining-dirs] adjacent-coords]
-    (if dir
-      (do (f (get-in grid dir))
-        (recur remaining-dirs))
+  (loop [[adjacent & remaining-adjacent] adjacent-coords]
+    (if adjacent
+      (do (f (get-in grid adjacent))
+        (recur remaining-adjacent))
       match)))
 
-(each-adjacent #(print %) [[1 2 3][4 5 6][7 8 9]] [1 1])
+(defn str-to-keys
+  "Turns a string into a seq of keywords"
+  [string]
+  (map #(-> % str keyword) string))
+
+(defn is-prefix?
+  "determines if string is a valid prefix"
+  [trie string]
+  (->> string str-to-keys (get-in trie) boolean))
+
+
+#_(each-adjacent #(print %) [[1 2 3][4 5 6][7 8 9]] [1 1])
+(def t {:a {:b {:c {:word "ab"}}}})
+(is-prefix? trie "baby")
+
