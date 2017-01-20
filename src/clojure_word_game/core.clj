@@ -40,10 +40,10 @@
   [& args]
   (-> 26 rand-int (+ 65) char str))
 
-(defn random-letter-seq
-  "Returns a string of random letters"
+(defn random-letter-vec
+  "Returns a vector of random letters"
   [length]
-  (map random-letter (range length)))
+  (mapv random-letter (range length)))
 
 (defn make-trie
   [words]
@@ -58,17 +58,24 @@
   "makes a game board of random letters"
   [s]
   (vec (for [x (range s)]
-    (vec (random-letter-seq s)))))
+    (random-letter-vec s))))
 
 (def board (make-grid 3))
 
+(defn adjacent-coords
+  [[x y]]
+  (for [mod-y [-1 0 1] mod-x [-1 0 1]
+          :when (not-every? #(= 0 %) [mod-x mod-y])]
+          [(+ mod-y y)(+ mod-x x)]))
 
+(defn each-adjacent
+  [f grid coords]
+  (def adjacent-coords (adjacent-coords coords))
 
-(defn adjacent
-  [grid coords]
-  ((get-in grid coords)))
+  (loop [[dir & remaining-dirs] adjacent-coords]
+    (if dir
+      (do (f (get-in grid dir))
+        (recur remaining-dirs))
+      match)))
 
-#_(adjacent board [2 2])
-
-
-
+(each-adjacent #(print %) [[1 2 3][4 5 6][7 8 9]] [1 1])
