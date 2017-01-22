@@ -10,7 +10,7 @@
     #(= % (s/lower-case %))
     (s/split (slurp "/usr/share/dict/words")
     #"\n")))
-(def w (generate-word-set))
+#_(def w (generate-word-set))
 
 (defn str-to-keys
   "Turns a string into a seq of keywords"
@@ -36,7 +36,7 @@
       (str-to-keys curr)
       assoc :word curr)))))
 
-(def trie (make-trie (generate-word-set)))
+#_(def trie (make-trie (generate-word-set)))
 
 (defn make-board
   "makes a game board of random letters"
@@ -47,9 +47,11 @@
 (def board (make-board 3))
 
 (defn adjacent-coords
-  [[y x]]
+  [[y x] s]
   (for [mod-y [-1 0 1] mod-x [-1 0 1]
-          :when (not-every? #(= 0 %) [mod-x mod-y])]
+          :when (and (not (every? #(= 0 %) [mod-x mod-y]))
+                     (<= 0 (+ y mod-y) (- s 1))
+                     (<= 0 (+ x mod-x) (- s 1)))]
           [(+ mod-y y)(+ mod-x x)]))
 (defn grid-coords
   [grid]
@@ -57,34 +59,65 @@
         [x val] (map-indexed vector row)]
   [y x]))
 
-(defn each-adjacent
-  [f grid coords]
-  (def adjacent-coords (adjacent-coords coords))
+(defn in-vec?
+  [sub vec]
+  (some #(= sub %) vec))
 
-  (loop [[adjacent & remaining-adjacent] adjacent-coords]
-    (if adjacent
-      (do (f (get-in grid adjacent))
-        (recur remaining-adjacent)))))
+(defn each-adjacent
+  [grid coords]
+
+  (loop [[adjacent & remaining-adjacent] (adjacent-coords coords) visited [coords] string (str (get-in grid coords) "") word-matches []]
+    (if (not adjacent)
+      word-matches
+      (if (in-vec? adjacent visited)
+       (recur remaining-adjacent visited string word-matches)
+        (do (when (get-in grid adjacent) (print remaining-adjacent "fuuuu"))
+
+        (recur (concat remaining-adjacent (filter #(in-vec? % visited)(adjacent-coords adjacent))) (conj visited adjacent) (str string (get-in grid adjacent)) (conj word-matches string)))
+      ))))
 
 (defn is-prefix?
   "determines if string is a valid prefix"
   [trie string]
   (->> string str-to-keys (get-in trie) boolean))
-(defn in-vec?
-  [sub vec]
-  (some #(= sub %) vec))
 
-(defn list-matches
+(defn all-paths
   [grid coords]
-  (loop [match-words []]
-  (loop [[adjacent & remaining-adjacent] (adjacent-coords coords) visited [] string (get-in grid coords)]
-    (if (or (not adjacent) (in-vec? adjacent visited))
+  (def grid-size (count grid))
+
+  (loop [[vertex & neighbors] (into (adjacent-coords coords grid-size) [coords])
+         visited #{vertex}
+         string ""
+         l 0]
+         #_(print vertex neighbors visited "XXXX")
+    (if (or (not vertex) (> l 200))
+      string
+      (recur
+        (remove (into visited [vertex]) (into neighbors (adjacent-coords vertex grid-size)))
+        (into visited [vertex])
+        (str string (get-in grid vertex))
+        (inc l))))
+  )
+;broken inner loop and outer loop run one then the other i have no idea what im doing
+#_(defn list-matches
+  [grid]
+  (def grid-size (count grid))
+  (loop [[coords & remaining-coords] (grid-coords grid) match-words []]
+    (print "OUTER")
+    (if (not coords)
+    match-words
+  (recur remaining-coords
+    (conj match-words (loop [[vertex & neighbors] (adjacent-coords coords grid-size)
+                                visited #{vertex}  string (get-in grid coords) l 0]
+    (print "INNER")
+    (if (or (not vertex) (< l 200))
+      string
+      (recur (remove visited (into neighbors (adjacent-coords vertex grid-size))) (into visited [vertex]) (str string (get-in grid vertex)) (inc l)))
+    #_(print visited adjacent "pip")
+    #_(if (or (not (get-in grid adjacent)) (in-vec? adjacent visited))
       (conj match-words string)
-      (recur remaining-adjacent (conj visited adjacent) (str string (get-in grid adjacent)))
-      #_(recur (adjacent-coords adjacent) [adjacent] "")
-))))
+      (recur (concat remaining-adjacent (adjacent-coords adjacent))(conj visited adjacent) (str string (get-in grid adjacent)))
+    ))
+)))))
 
-
-#_(list-matches [[1 2][3 4]] [1 0])
-
-(print (grid-coords [[1 2][3 4]]))
+(all-paths [["a" "b" "e"]["c" "d" "f"]["g" "h" "i"]][0 0])
