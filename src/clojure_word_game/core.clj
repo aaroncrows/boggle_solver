@@ -11,7 +11,7 @@
     #(= % (s/lower-case %))
     (s/split (slurp "/usr/share/dict/words")
     #"\n")))
-#_(def w (generate-word-set))
+(def w (generate-word-set))
 
 (defn str-to-keys
   "Turns a string into a seq of keywords"
@@ -37,7 +37,7 @@
       (str-to-keys curr)
       assoc :word curr)))))
 
-#_(def trie (make-trie (generate-word-set)))
+(def trie (make-trie (generate-word-set)))
 
 (defn make-board
   "makes a game board of random letters"
@@ -106,9 +106,12 @@
                 :let [{s :string v :visited c :current} path-map]
                 :when (not (contains? v coords))]
                 (do {:current coords :string (str s (get-in grid c)) :visited (into v [c])}))
-              mapss (if (not remaining) new-maps (into remaining new-maps))]
+              mapss (if (not remaining) new-maps (into remaining new-maps))
+              word (:word (get-in trie (str-to-keys (:string path-map))))
+              ]
         (do
-           (recur  mapss (conj word-matches (str (:string path-map)(get-in grid (:current path-map)))) (+ l 1)))
+            #_(print (:word (get-in trie (str-to-keys (:string path-map)))))
+           (recur  mapss (if word (conj word-matches word) word-matches) (+ l 1)))
   )))
     #_(if (or (not vertex) (> l 200))
       word-matches
@@ -141,6 +144,9 @@
       (recur (concat remaining-adjacent (coords-and-adjacent adjacent))(conj visited adjacent) (str string (get-in grid adjacent)))
     ))
 )))))
-(def test-grid [["c" "a" "t"]["b" "t" "o"]["d" "g" "r"]])
-(filter #(< 2 (count %))(flatten (for [square (grid-coords test-grid)]
-(all-paths test-grid square))))
+(def test-grid [["c" "a" "t"]
+                ["b" "t" "o"]
+                ["d" "g" "r"]])
+(set (filter #(and (< 2 (count %)) (is-prefix? trie %))(flatten (for [square (grid-coords test-grid)]
+(all-paths test-grid square)))))
+
