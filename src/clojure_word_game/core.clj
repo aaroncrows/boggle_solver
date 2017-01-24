@@ -2,6 +2,7 @@
   (:gen-class))
 
 (require '[clojure.string :as s])
+
 (declare str-to-keys)
 
 (defn generate-word-set
@@ -46,13 +47,13 @@
 
 (def board (make-board 3))
 
-(defn adjacent-coords
+(defn coords-and-adjacent
   [[y x] s]
   (for [mod-y [-1 0 1] mod-x [-1 0 1]
           :when (and (not (every? #(= 0 %) [mod-x mod-y]))
                      (<= 0 (+ y mod-y) (- s 1))
                      (<= 0 (+ x mod-x) (- s 1)))]
-          [(+ mod-y y)(+ mod-x x)]))
+    [(+ mod-y y)(+ mod-x x)]))
 (defn grid-coords
   [grid]
   (for [[y row] (map-indexed vector grid)
@@ -66,14 +67,14 @@
 (defn each-adjacent
   [grid coords]
 
-  (loop [[adjacent & remaining-adjacent] (adjacent-coords coords) visited [coords] string (str (get-in grid coords) "") word-matches []]
+  (loop [[adjacent & remaining-adjacent] (coords-and-adjacent coords) visited [coords] string (str (get-in grid coords) "") word-matches []]
     (if (not adjacent)
       word-matches
       (if (in-vec? adjacent visited)
        (recur remaining-adjacent visited string word-matches)
         (do (when (get-in grid adjacent) (print remaining-adjacent "fuuuu"))
 
-        (recur (concat remaining-adjacent (filter #(in-vec? % visited)(adjacent-coords adjacent))) (conj visited adjacent) (str string (get-in grid adjacent)) (conj word-matches string)))
+        (recur (concat remaining-adjacent (filter #(in-vec? % visited)(coords-and-adjacent adjacent))) (conj visited adjacent) (str string (get-in grid adjacent)) (conj word-matches string)))
       ))))
 
 (defn is-prefix?
@@ -81,23 +82,44 @@
   [trie string]
   (->> string str-to-keys (get-in trie) boolean))
 
+(defn visit
+  [coords visited string grid]
+  [(into visited [coords]) (str string (get-in grid coords))])
+
+(defn traverse-path-map
+  [{nxt :next vst :visited s :string} current grid]
+
+)
+
 (defn all-paths
   [grid coords]
   (def grid-size (count grid))
 
-  (loop [[vertex & neighbors] (into (adjacent-coords coords grid-size) [coords])
-         visited #{vertex}
-         string ""
+  (loop [[path-map & remaining] [{:current coords :string "" :visited #{}}]
+         word-matches []
          l 0]
-         #_(print vertex neighbors visited "XXXX")
-    (if (or (not vertex) (> l 200))
-      string
+
+      (if (or (not path-map) (> l 1000))
+        word-matches
+        (let [new-maps
+          (for [coords (coords-and-adjacent (:current path-map) grid-size)
+                :let [{s :string v :visited c :current} path-map]
+                :when (not (contains? v coords))]
+                (do {:current coords :string (str s (get-in grid c)) :visited (into v [c])}))
+              mapss (if (not remaining) new-maps (into remaining new-maps))]
+        (do
+           (recur  mapss (conj word-matches (str (:string path-map)(get-in grid (:current path-map)))) (+ l 1)))
+  )))
+    #_(if (or (not vertex) (> l 200))
+      word-matches
+      (let [[visited string] (visit vertex visited string grid)]
       (recur
-        (remove (into visited [vertex]) (into neighbors (adjacent-coords vertex grid-size)))
-        (into visited [vertex])
-        (str string (get-in grid vertex))
+        (remove visited (into neighbors (coords-and-adjacent vertex grid-size)))
+        visited
+        string
+        (conj word-matches string)
         (inc l))))
-  )
+)
 ;broken inner loop and outer loop run one then the other i have no idea what im doing
 #_(defn list-matches
   [grid]
@@ -107,17 +129,18 @@
     (if (not coords)
     match-words
   (recur remaining-coords
-    (conj match-words (loop [[vertex & neighbors] (adjacent-coords coords grid-size)
+    (conj match-words (loop [[vertex & neighbors] (coords-and-adjacent coords grid-size)
                                 visited #{vertex}  string (get-in grid coords) l 0]
     (print "INNER")
     (if (or (not vertex) (< l 200))
       string
-      (recur (remove visited (into neighbors (adjacent-coords vertex grid-size))) (into visited [vertex]) (str string (get-in grid vertex)) (inc l)))
+      (recur (remove visited (into neighbors (coords-and-adjacent vertex grid-size))) (into visited [vertex]) (str string (get-in grid vertex)) (inc l)))
     #_(print visited adjacent "pip")
     #_(if (or (not (get-in grid adjacent)) (in-vec? adjacent visited))
       (conj match-words string)
-      (recur (concat remaining-adjacent (adjacent-coords adjacent))(conj visited adjacent) (str string (get-in grid adjacent)))
+      (recur (concat remaining-adjacent (coords-and-adjacent adjacent))(conj visited adjacent) (str string (get-in grid adjacent)))
     ))
 )))))
-
-(all-paths [["a" "b" "e"]["c" "d" "f"]["g" "h" "i"]][0 0])
+(def test-grid [["c" "a" "t"]["b" "t" "o"]["d" "g" "r"]])
+(filter #(< 2 (count %))(flatten (for [square (grid-coords test-grid)]
+(all-paths test-grid square))))
