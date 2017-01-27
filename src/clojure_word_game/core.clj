@@ -67,14 +67,16 @@
               word (:word (get-in trie (str-to-keys (:string path-map))))]
           (recur  (if (not remaining) new-maps (into remaining new-maps))
                   (if word (conj word-matches word) word-matches))))))
+(defn -main
+  []
 
 (def test-grid [["c" "a" "t"]
                 ["b" "t" "o"]
                 ["d" "g" "r"]])
 
-(set
+(def results (set
   (filter
     #(and (< 2 (count %)) (is-prefix? trie %))
     (flatten (for [square (grid-coords test-grid)]
-              (all-words test-grid square)))))
-
+              (all-words test-grid square))))))
+(doseq [r results] (println r)))
