@@ -56,9 +56,9 @@
   (->Path coords "" #{})
   (loop [[path-map & remaining] [(->Path coords "" #{})]
          word-matches []]
-
       (if (or (not path-map))
         word-matches
+        (if (is-prefix? trie (:string path-map))
         (let [new-maps
           (for [coords (coords-and-adjacent (:current path-map) grid-size)
                 :let [{s :string v :visited c :current} path-map]
@@ -66,7 +66,8 @@
                 (->Path coords (str s (get-in grid c)) (into v [c])))
               word (:word (get-in trie (str-to-keys (:string path-map))))]
           (recur  (if (not remaining) new-maps (into remaining new-maps))
-                  (if word (conj word-matches word) word-matches))))))
+                  (if word (conj word-matches word) word-matches)))
+        (recur remaining word-matches)))))
 (defn -main
   []
 
@@ -76,7 +77,7 @@
 
 (def results (set
   (filter
-    #(and (< 2 (count %)) (is-prefix? trie %))
+    #(< 2 (count %))
     (flatten (for [square (grid-coords test-grid)]
               (all-words test-grid square))))))
 (doseq [r results] (println r)))
